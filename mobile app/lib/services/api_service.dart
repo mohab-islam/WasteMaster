@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // Use 10.0.2.2 for Android Emulator to access localhost of the computer
   // Use your computer's LAN IP (e.g., 192.168.1.5) for physical device
-  static const String baseUrl = 'https://wastemaster.onrender.com';
+  static const String baseUrl = 'https://wastemaster.onrender.com/api';
 
   // Register User
   static Future<Map<String, dynamic>> registerUser(String name, String email, String password) async {
