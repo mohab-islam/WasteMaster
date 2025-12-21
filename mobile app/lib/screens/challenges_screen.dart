@@ -213,14 +213,15 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => _joinChallenge(challenge['_id']),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.cardColor,
-                        side: const BorderSide(color: AppTheme.primaryGold), 
+                      child: ElevatedButton(
+                        onPressed: () => _joinChallenge(challenge['_id']),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.cardColor,
+                          foregroundColor: AppTheme.primaryGold, // Mint Green Text
+                          side: const BorderSide(color: AppTheme.primaryGold), 
+                        ),
+                        child: const Text('Join Challenge'),
                       ),
-                      child: const Text('Join Challenge'),
-                    ),
                   )
                 ] else if (isJoined && !isCompleted) ...[
                    const SizedBox(height: 16),

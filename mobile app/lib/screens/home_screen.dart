@@ -72,31 +72,59 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        backgroundColor: AppTheme.background,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(color: AppTheme.primaryGold),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                   const CircleAvatar(
+                    backgroundColor: AppTheme.background,
+                    radius: 30,
+                    child: Icon(Icons.person, color: AppTheme.primaryGold, size: 35),
+                   ),
+                   const SizedBox(height: 12),
+                   Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                   const Text('Eco-Warrior', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person, color: AppTheme.textLight),
+              title: const Text('Profile', style: TextStyle(color: AppTheme.textLight)),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
+              onTap: () async {
+                 Navigator.pop(context);
+                 await AuthService.logout();
+                 if (mounted) {
+                   Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                 }
+              },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: const Text('My Dashboard'),
         centerTitle: true,
-        leading: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) async {
-            if (value == 'profile') {
-               Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-            } else if (value == 'logout') {
-               await AuthService.logout();
-               if (mounted) {
-                 Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-               }
-            }
-          },
-          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-            const PopupMenuItem<String>(
-              value: 'profile',
-              child: Text('Profile'),
-            ),
-             const PopupMenuItem<String>(
-              value: 'logout',
-              child: Text('Sign Out'),
-            ),
-          ],
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
       ),
       body: _isLoading 
@@ -162,12 +190,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Active Challenges (List)
-                  if (_activeChallenges.isNotEmpty) ...[
-                    _sectionHeader('Active Challenges'),
-                    const SizedBox(height: 12),
-                    ..._activeChallenges.map((c) => _buildChallengeCard(c)),
-                  ]
+                  // Active Challenges Section
+                  _sectionHeader('Active Challenges'),
+                  const SizedBox(height: 12),
+                  if (_activeChallenges.isNotEmpty)
+                    ..._activeChallenges.map((c) => _buildChallengeCard(c))
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3), style: BorderStyle.solid)
+                      ),
+                      child: Column(
+                        children: [
+                           const Icon(Icons.emoji_events_outlined, size: 40, color: AppTheme.primaryGold),
+                           const SizedBox(height: 10),
+                           const Text('No active challenges', style: TextStyle(color: AppTheme.textLight, fontWeight: FontWeight.bold)),
+                           const SizedBox(height: 4),
+                           const Text('Join a challenge to earn badges!', style: TextStyle(color: AppTheme.textDim)),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
