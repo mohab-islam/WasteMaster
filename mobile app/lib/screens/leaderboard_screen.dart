@@ -20,8 +20,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Future<void> _loadLeaderboard() async {
+    setState(() => _isLoading = true);
     try {
-      final data = await ApiService.getLeaderboard();
+      String? filter = _currentTab == 1 ? 'weekly' : null;
+      final data = await ApiService.getLeaderboard(timeframe: filter);
       if (mounted) {
         setState(() {
           _leaderboard = data;
@@ -55,7 +57,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     children: [
                       _buildTab('Overall', 0),
                       _buildTab('Weekly', 1),
-                      _buildTab('Friends', 2),
                     ],
                   ),
                 ),
@@ -84,17 +85,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     bool isSelected = _currentTab == index;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentTab = index;
-          // TODO: Fetch filtered data based on tab.
-          // For now, we keep the list same or shuffle demo
-          if (index == 1) {
-             // Mock Weekly: Reverse sort or shuffle for demo visual change
-             // _leaderboard.shuffle(); // Valid for demo
-          } else if (index == 0) {
-             // _loadLeaderboard(); // Reset
-          }
-        });
+        if (_currentTab != index) {
+            setState(() {
+                _currentTab = index;
+            });
+            _loadLeaderboard();
+        }
       },
       child: Column(
         children: [

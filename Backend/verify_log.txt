@@ -2,14 +2,14 @@
 🚀 Starting IoT Bridge Verification...
 
 1. Testing POST /api/token/generate...
-✅ Token Generated: b3deedaf-b675-404e-92b2-c6baca06c898
+✅ Token Generated: 727e381b-324a-4491-aa08-1974a7cde923
    Points: 10
 
 2. Creating/Logging in Test User...
-✅ User Authenticated: IoT Tester (6947cd111e5517807b0c4b96)
+✅ User Authenticated: IoT Tester (6947d1e01e5517807b0c4bb0)
    Initial Points: 0
 
-3. Claiming Token b3deedaf-b675-404e-92b2-c6baca06c898 for User 6947cd111e5517807b0c4b96...
+3. Claiming Token 727e381b-324a-4491-aa08-1974a7cde923 for User 6947d1e01e5517807b0c4bb0...
 ✅ Token Claimed Successfully!
    Message: Successfully claimed 10 points!
    New Balance: 10

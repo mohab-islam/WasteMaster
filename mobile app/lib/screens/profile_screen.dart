@@ -17,6 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _email = 'loading...';
   int _points = 0;
   int _totalRecycled = 0;
+  List<dynamic> _badges = [];
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _email = userData['email'];
             _points = userData['points'];
             _totalRecycled = userData['totalRecycled'] ?? 0;
+            _badges = userData['completedChallenges'] ?? [];
           });
         }
       } catch (e) {
@@ -105,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const HistoryScreen()));
               }),
               _buildSettingsItem(Icons.badge, 'Badges', () {
-                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Badges Coming Soon!'), duration: Duration(seconds: 1)));
+                 _showBadges(context);
               }),
               _buildSettingsItem(Icons.settings, 'Account Settings', () {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings Coming Soon!'), duration: Duration(seconds: 1)));
@@ -179,6 +181,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: const Icon(Icons.chevron_right, color: AppTheme.textDim),
         onTap: onTap,
       ),
+    );
+  }
+
+  void _showBadges(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.background,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('My Badges', style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (_badges.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text('No badges yet. Complete challenges to earn them!', style: TextStyle(color: AppTheme.textDim)),
+                  ),
+                )
+              else
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, childAspectRatio: 0.8),
+                    itemCount: _badges.length,
+                    itemBuilder: (ctx, i) {
+                      final badge = _badges[i];
+                      return Column(children: [
+                        Container(
+                           padding: const EdgeInsets.all(12),
+                           decoration: BoxDecoration(
+                               color: AppTheme.primaryGold.withOpacity(0.1),
+                               shape: BoxShape.circle
+                           ),
+                           child: const Icon(Icons.verified, color: AppTheme.primaryGold, size: 40)
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                            badge['title'] ?? 'Badge', 
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppTheme.textLight, fontWeight: FontWeight.bold)
+                        )
+                      ]);
+                    },
+                  ),
+                )
+            ],
+          ),
+        );
+      },
     );
   }
 }

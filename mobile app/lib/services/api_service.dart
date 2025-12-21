@@ -130,8 +130,9 @@ class ApiService {
   }
 
   // Get Leaderboard
-  static Future<List<dynamic>> getLeaderboard() async {
-    final url = Uri.parse('$baseUrl/leaderboard');
+  static Future<List<dynamic>> getLeaderboard({String? timeframe}) async {
+    String query = timeframe != null ? '?timeframe=$timeframe' : '';
+    final url = Uri.parse('$baseUrl/leaderboard$query');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {

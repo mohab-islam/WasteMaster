@@ -21,7 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
     const ScanScreen(),
     const LeaderboardScreen(),
     const ChallengesScreen(),
-    const ProfileScreen(),
+    // Profile removed from bottom bar
   ];
 
   @override
@@ -56,11 +56,6 @@ class _MainLayoutState extends State<MainLayout> {
             icon: Icon(Icons.flag_outlined),
             activeIcon: Icon(Icons.flag),
             label: 'Challenges',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
           ),
         ],
       ),

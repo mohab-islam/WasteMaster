@@ -3,16 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Colors extracted from design
-  static const Color background = Color(0xFF222018); // Dark Olive/Brown
-  static const Color cardColor = Color(0xFF2D2B22); // Slightly lighter for cards
-  static const Color primaryGold = Color(0xFFD4B066); // Gold/Yellow for accents
-  static const Color secondaryGreen = Color(0xFF7DA77E); // Sage green for success/badges
-  static const Color textLight = Color(0xFFF3F0E6); // Off-white text
-  static const Color textDim = Color(0xFFA6A498); // Dimmed text for subtitles
+  static const Color background = Color(0xFFFFFFFF); // White
+  static const Color cardColor = Color(0xFFF0F7F4); // Very light minty grey
+  static const Color primaryGold = Color(0xFF26A69A); // Mint Green (Teal 400)
+  static const Color secondaryGreen = Color(0xFF80CBC4); // Lighter Mint
+  static const Color textLight = Color(0xFF212121); // Dark Grey/Black for Light Mode
+  static const Color textDim = Color(0xFF757575); // Grey for subtitles
 
-  static ThemeData get darkTheme {
+  static ThemeData get darkTheme { // keeping name 'darkTheme' but implementation is now Light/Mint
     return ThemeData(
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       scaffoldBackgroundColor: background,
       primaryColor: primaryGold,
       appBarTheme: AppBarTheme(
@@ -30,7 +30,8 @@ class AppTheme {
         selectedItemColor: primaryGold,
         unselectedItemColor: textDim,
         type: BottomNavigationBarType.fixed,
-        elevation: 0,
+        elevation: 8,
+        showUnselectedLabels: true,
       ),
       textTheme: TextTheme(
         displayLarge: GoogleFonts.outfit(color: textLight, fontWeight: FontWeight.bold),
@@ -41,14 +42,13 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryGold,
-          foregroundColor: background, // Black text on Gold button
+          foregroundColor: Colors.white, 
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       cardColor: cardColor,
-      /* cardTheme caused compilation issue on some versions, using property instead */
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: cardColor,
