@@ -54,8 +54,11 @@ class _HomeScreenState extends State<HomeScreen> {
             
             // Logic: Show ALL joined challenges
             List joinedIds = userDetails['joinedChallenges'] ?? [];
-            // helper to safe compare
-            bool isJoined(String id) => joinedIds.any((j) => j.toString() == id);
+            // helper to safe compare (Handle populated objects or ID strings)
+            bool isJoined(String id) => joinedIds.any((j) {
+                if (j is Map) return j['_id'].toString() == id;
+                return j.toString() == id;
+            });
 
             _activeChallenges = challenges.where((c) => isJoined(c['_id'].toString())).toList();
             
@@ -77,21 +80,16 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            UserAccountsDrawerHeader(
               decoration: const BoxDecoration(color: AppTheme.primaryGold),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                   const CircleAvatar(
-                    backgroundColor: AppTheme.background,
-                    radius: 30,
-                    child: Icon(Icons.person, color: AppTheme.primaryGold, size: 35),
-                   ),
-                   const SizedBox(height: 12),
-                   Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                   const Text('Eco-Warrior', style: TextStyle(color: Colors.white70)),
-                ],
+              accountName: Text(
+                _userName, 
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+              ),
+              accountEmail: const Text('Eco-Warrior'), // Subtitle
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: AppTheme.background,
+                child: Icon(Icons.person, color: AppTheme.primaryGold, size: 35),
               ),
             ),
             ListTile(

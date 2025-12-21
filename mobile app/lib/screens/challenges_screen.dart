@@ -72,7 +72,13 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
   bool _isJoined(String challengeId) {
      if (_userData == null || _userData!['joinedChallenges'] == null) return false;
      final List joined = _userData!['joinedChallenges'];
-     return joined.contains(challengeId);
+     // Handle both populated objects (Map) and simple IDs (String)
+     return joined.any((item) {
+       if (item is Map) {
+         return item['_id'].toString() == challengeId;
+       }
+       return item.toString() == challengeId;
+     });
   }
 
   bool _isCompleted(String challengeId) {
