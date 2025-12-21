@@ -103,10 +103,39 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
     // If completed, return goal to show full bar
     if (_isCompleted(challenge['_id'])) return challenge['goal'] ?? 0;
 
+    // Get joinedAt if joined
+    DateTime? joinedAt;
+    if (_isJoined(challenge['_id'])) {
+      // Find the challenge object in _userData which contains joinedAt
+      // The API now returns flattened challenge objects in joinedChallenges, so if we can match ID we might find joinedAt.
+      // Wait, _challenges list comes from getChallenges() which might NOT have joinedAt.
+      // _userData['joinedChallenges'] has the joinedAt if we updated API to send it.
+      // Yes, API sends: joinedChallenges: user.joinedChallenges.map(jc => ({ ...jc.challenge.toObject(), joinedAt: jc.joinedAt }))
+      
+      final joinedList = _userData!['joinedChallenges'] as List;
+      final userChallenge = joinedList.firstWhere((j) {
+           if (j is Map) return j['_id'].toString() == challenge['_id'];
+           return j.toString() == challenge['_id'];
+      }, orElse: () => null);
+
+      if (userChallenge != null && userChallenge is Map && userChallenge['joinedAt'] != null) {
+          joinedAt = DateTime.tryParse(userChallenge['joinedAt'].toString());
+      }
+    }
+
+    // Filter logs
+    final relevantHistory = _history.where((log) {
+       if (joinedAt != null) {
+          final logDate = DateTime.tryParse(log['scannedAt'].toString());
+          if (logDate != null && logDate.isBefore(joinedAt)) return false;
+       }
+       return true;
+    }).toList();
+
     String type = challenge['type'];
-    if (type == 'points') return 0; // TODO: Implement points tracking
-    if (type == 'total_items') return _history.length;
-    return _history.where((log) => log['wasteType'] == type).length;
+    if (type == 'points') return 0; // TODO
+    if (type == 'total_items') return relevantHistory.length;
+    return relevantHistory.where((log) => log['wasteType'] == type).length;
   }
 
   @override

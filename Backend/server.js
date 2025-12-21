@@ -99,15 +99,16 @@ app.post('/api/token/generate', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        const lowerEmail = email.toLowerCase();
 
-        const userExists = await User.findOne({ email });
+        const userExists = await User.findOne({ email: lowerEmail });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const user = await User.create({
             name,
-            email,
+            email: lowerEmail,
             password
         });
 
@@ -126,8 +127,9 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        const lowerEmail = email.toLowerCase();
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: lowerEmail });
 
         // Simple password check (In production use bcrypt)
         if (user && user.password === password) {
@@ -150,7 +152,7 @@ app.get('/api/user/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
             .populate('completedChallenges')
-            .populate('joinedChallenges');
+            .populate('joinedChallenges.challenge');
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -161,7 +163,16 @@ app.get('/api/user/:id', async (req, res) => {
             email: user.email,
             points: user.points,
             totalRecycled: user.totalRecycled,
-            joinedChallenges: user.joinedChallenges,
+            // Flatten the structure for frontend or send as is? 
+            // Send as is, frontend can handle or we flatten here to match old API for minimal breakage.
+            // Let's send the populated objects but flattened to look like List<Challenge> with metadata?
+            // Actually, simply mapping to the challenge object is easier for frontend reuse so long as we handle metadata there.
+            // But wait, frontend expects list of objects with _id.
+            // Let's return the list of userChallenge objects: { _id, title..., joinedAt }
+            joinedChallenges: user.joinedChallenges.map(jc => ({
+                ...jc.challenge.toObject(),
+                joinedAt: jc.joinedAt
+            })),
             completedChallenges: user.completedChallenges
         });
     } catch (error) {
@@ -222,19 +233,34 @@ app.post('/api/recycle/claim', async (req, res) => {
         let challengeMessage = '';
         if (user.joinedChallenges && user.joinedChallenges.length > 0) {
             // Fetch full challenge objects
-            const challenges = await Challenge.find({ _id: { $in: user.joinedChallenges } });
+            // Fetch full challenge objects
+            // user.joinedChallenges is now array of { challenge: ObjectId, joinedAt: Date }
+            // We need to fetch details for these IDs.
+            const joinedData = user.joinedChallenges;
+            const challengeIds = joinedData.map(j => j.challenge);
+
+            const challenges = await Challenge.find({ _id: { $in: challengeIds } });
 
             for (const challenge of challenges) {
+                // Find the joinedAt date for this specific challenge
+                const userChallenge = joinedData.find(j => j.challenge.equals(challenge._id));
+                const joinedAt = userChallenge ? userChallenge.joinedAt : new Date(0); // Default to epoch if missing
+
                 let currentProgress = 0;
 
-                // Calculate progress based on type
+                // Calculate progress based on type BUT ONLY count logs AFTER joinedAt
                 if (challenge.type === 'total_items') {
-                    currentProgress = user.totalRecycled;
-                } else {
-                    // Get count of specific waste type from logs
+                    // Count all logs since joined
                     currentProgress = await RecycleLog.countDocuments({
                         userId: user._id,
-                        wasteType: challenge.type
+                        scannedAt: { $gte: joinedAt }
+                    });
+                } else {
+                    // Get count of specific waste type from logs since joined
+                    currentProgress = await RecycleLog.countDocuments({
+                        userId: user._id,
+                        wasteType: challenge.type,
+                        scannedAt: { $gte: joinedAt }
                     });
                 }
 
@@ -242,7 +268,8 @@ app.post('/api/recycle/claim', async (req, res) => {
                     // Challenge Completed!
                     user.points += challenge.rewardPoints;
                     user.completedChallenges.push(challenge._id);
-                    user.joinedChallenges = user.joinedChallenges.filter(id => !id.equals(challenge._id));
+                    // Remove from joined (filter out the object)
+                    user.joinedChallenges = user.joinedChallenges.filter(jc => !jc.challenge.equals(challenge._id));
 
                     challengeMessage += ` | Completed ${challenge.title} (+${challenge.rewardPoints} pts!)`;
                     console.log(`User ${user.name} completed challenge: ${challenge.title}`);
@@ -356,15 +383,18 @@ app.post('/api/challenges/join', async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Check if already joined
-        if (user.joinedChallenges.includes(challengeId)) {
+        // Check if already joined (compare ObjectId in the objects)
+        if (user.joinedChallenges.some(jc => jc.challenge.toString() === challengeId)) {
             return res.status(400).json({ message: 'Already joined this challenge' });
         }
 
-        user.joinedChallenges.push(challengeId);
+        user.joinedChallenges.push({
+            challenge: challengeId,
+            joinedAt: new Date()
+        });
         await user.save();
 
-        res.json({ message: 'Challenge Joined Successfully!', joinedChallenges: user.joinedChallenges });
+        res.json({ message: 'Challenge Joined Successfully!' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
