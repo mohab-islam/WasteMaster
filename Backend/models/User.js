@@ -24,8 +24,14 @@ const UserSchema = new mongoose.Schema({
         default: 0
     },
     joinedChallenges: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Challenge'
+        challenge: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Challenge'
+        },
+        joinedAt: {
+            type: Date,
+            default: Date.now
+        }
     }],
     completedChallenges: [{
         type: mongoose.Schema.Types.ObjectId,
