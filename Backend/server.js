@@ -169,10 +169,17 @@ app.get('/api/user/:id', async (req, res) => {
             // Actually, simply mapping to the challenge object is easier for frontend reuse so long as we handle metadata there.
             // But wait, frontend expects list of objects with _id.
             // Let's return the list of userChallenge objects: { _id, title..., joinedAt }
-            joinedChallenges: user.joinedChallenges.map(jc => ({
-                ...jc.challenge.toObject(),
-                joinedAt: jc.joinedAt
-            })),
+            joinedChallenges: user.joinedChallenges.map(jc => {
+                // Safety check for legacy data (simple IDs) or failed population
+                if (!jc || !jc.challenge || typeof jc.challenge.toObject !== 'function') {
+                    // Try to handle legacy ID if possible, or just ignore
+                    return null;
+                }
+                return {
+                    ...jc.challenge.toObject(),
+                    joinedAt: jc.joinedAt
+                };
+            }).filter(item => item !== null),
             completedChallenges: user.completedChallenges
         });
     } catch (error) {
