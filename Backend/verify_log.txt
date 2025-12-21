@@ -2,6 +2,19 @@
 🚀 Starting IoT Bridge Verification...
 
 1. Testing POST /api/token/generate...
-❌ Error in Step 1: Request failed with status code 404
-Status: 404
-Data: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/token/generate</pre>\n</body>\n</html>\n"
+✅ Token Generated: b3deedaf-b675-404e-92b2-c6baca06c898
+   Points: 10
+
+2. Creating/Logging in Test User...
+✅ User Authenticated: IoT Tester (6947cd111e5517807b0c4b96)
+   Initial Points: 0
+
+3. Claiming Token b3deedaf-b675-404e-92b2-c6baca06c898 for User 6947cd111e5517807b0c4b96...
+✅ Token Claimed Successfully!
+   Message: Successfully claimed 10 points!
+   New Balance: 10
+
+4. Verifying Double Spend Protection...
+✅ Double Claim Prevented (Got 400 as expected)
+
+🎉 Verification Complete!

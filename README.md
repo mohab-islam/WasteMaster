@@ -105,3 +105,77 @@ cd "mobile app"
 flutter pub get
 flutter run
 ```
+
+---
+
+---
+
+## 🤖 Step 3: IoT Bridge (Raspberry Pi Setup)
+
+The **IoT Bridge** is the link between your physical recycling hardware and the WasteMaster cloud. It allows a Raspberry Pi (or any internet-connected device) to generate reward tokens when a user recycles an item.
+
+### 🏗️ Architecture
+1.  **Detection:** Sensors on the Pi detect waste (e.g., Plastic inserted).
+2.  **Generation:** The Pi runs `pi_client.py` which calls the `POST /api/token/generate` endpoint.
+3.  **Display:** The server returns a unique **Token** and a **QR Code URL**, which the Pi displays on its screen.
+4.  **Claim:** The user scans this QR code using the WasteMaster Mobile App to instantly claim points.
+
+### 🐍 The Pi Client Script (`pi_client.py`)
+This Python script is the brain of the operation. It has two modes:
+
+1.  **Simulation Mode (Default):**
+    *   Run it on your laptop or Pi.
+    *   Press `ENTER` to manually simulate a "Trash Sorted" event.
+    *   Great for testing without sensors.
+
+2.  **Real Hardware Mode (GPIO):**
+    *   Set `REAL_HARDWARE = True` inside the script.
+    *   It uses `RPi.GPIO` to listen for signals on **Pin 17**.
+    *   When a sensor (like an inductive proximity sensor) triggers, it **automatically** calls the API.
+
+#### Deployment to Pi
+1.  Transfer `Backend/pi_client.py` to your Raspberry Pi.
+2.  Install the request library: `pip install requests`
+3.  Run the script: `python pi_client.py`
+4.  *(Optional)* Use `systemd` or `pm2` to keep this script running forever in the background.
+
+### 🔌 API Endpoint
+If you want to build your own custom hardware client (e.g., using Arduino or ESP32), simply make a POST request:
+
+*   **URL:** `https://wastemaster.onrender.com/api/token/generate`
+*   **Method:** `POST`
+*   **Body:** `{ "wasteType": "plastic" }`
+*   **Response:**
+    ```json
+    {
+      "success": true,
+      "token": "b3deedaf...",
+      "points": 10,
+      "qrUrl": "https://api.qrserver.com/..."
+    }
+    ```
+
+---
+
+## ✅ Verification & Testing tools
+
+We provide a specialized tool to test the entire system health without needing the physical hardware or mobile app.
+
+### `verify_iot_bridge.js`
+This script acts as both the "Pi" (creating tokens) and the "App" (claiming them) to ensure the server is working perfectly.
+
+**Command:**
+```bash
+# Test Cloud Server (Production)
+node verify_iot_bridge.js --prod
+
+# Test Local Server
+node verify_iot_bridge.js
+```
+
+**What it checks:**
+1.  Can the **Pi** generate a token?
+2.  Can a **User** register/login?
+3.  Can the **App** claim that token?
+4.  Does the system **Prevent** double-claiming the same token?
+
