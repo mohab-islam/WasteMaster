@@ -1,0 +1,7 @@
+
+🚀 Starting IoT Bridge Verification...
+
+1. Testing POST /api/token/generate...
+❌ Error in Step 1: Request failed with status code 404
+Status: 404
+Data: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/token/generate</pre>\n</body>\n</html>\n"

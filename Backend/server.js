@@ -59,6 +59,41 @@ app.get('/', (req, res) => {
     res.send('WasteMaster API is running...');
 });
 
+// 0. Generate Token (IoT - REST API)
+app.post('/api/token/generate', async (req, res) => {
+    try {
+        // e.g., { "wasteType": "plastic" }
+        const { wasteType } = req.body;
+
+        // Default to 'unknown' if not provided, or validate strictly
+        const type = wasteType || 'general';
+        const points = 10; // Fixed points for now
+
+        const tokenValue = uuidv4();
+
+        const newToken = await Token.create({
+            value: tokenValue,
+            type: type,
+            pointsValue: points,
+            status: 'active'
+        });
+
+        console.log(`[API] Token created: ${newToken.value} (${type})`);
+
+        res.status(201).json({
+            success: true,
+            message: 'Token generated successfully',
+            token: newToken.value,
+            points: points,
+            qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${newToken.value}`
+        });
+
+    } catch (error) {
+        console.error('Error in /api/token/generate:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // 1. Register User (Simple)
 // 1. Register User
 app.post('/api/auth/register', async (req, res) => {
