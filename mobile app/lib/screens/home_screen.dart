@@ -17,7 +17,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = 'User';
   int _points = 0;
   List<dynamic> _recentHistory = [];
+  List<dynamic> _fullHistory = []; // Added for progress calc
   List<dynamic> _activeChallenges = [];
+  List<dynamic> _joinedChallengesData = []; // Added for joinedAt metadata
   bool _isLoading = true;
 
   @override
@@ -49,13 +51,15 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             _points = userDetails['points'] ?? 0;
-            // Take top 2 history items
+            // Take top 2 history items for display
             _recentHistory = history.take(2).toList();
+            _fullHistory = history; // Store full history for calculations
             
             // Logic: Show ALL joined challenges
-            List joinedIds = userDetails['joinedChallenges'] ?? [];
+            _joinedChallengesData = userDetails['joinedChallenges'] ?? [];
+            
             // helper to safe compare (Handle populated objects or ID strings)
-            bool isJoined(String id) => joinedIds.any((j) {
+            bool isJoined(String id) => _joinedChallengesData.any((j) {
                 if (j is Map) return j['_id'].toString() == id;
                 return j.toString() == id;
             });
@@ -70,6 +74,51 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error loading dashboard: $e');
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- Helper Methods for Progress Calculation ---
+  bool _isCompleted(String challengeId) {
+     final List completed = []; // We can't easily access completedChallenges here without modifying state vars or assuming it's active. 
+     // Active challenges usually aren't completed, but if they are, they might show up.
+     // For safety, let's assume if it is in _activeChallenges list, we display it.
+     // But strictly speaking, completed logic relies on userDetails['completedChallenges'].
+     // Let's just calculate progress. Even if completed, progress is 100%.
+     return false; 
+  }
+
+  double _calculateProgress(dynamic challenge) {
+    int current = _calculateCurrentValue(challenge);
+    int goal = challenge['goal'] ?? 1;
+    return (current / goal).clamp(0.0, 1.0);
+  }
+
+  int _calculateCurrentValue(dynamic challenge) {
+    // Get joinedAt if joined
+    DateTime? joinedAt;
+    
+    // Find the challenge object in _joinedChallengesData which contains joinedAt
+    final userChallenge = _joinedChallengesData.firstWhere((j) {
+         if (j is Map) return j['_id'].toString() == challenge['_id'];
+         return j.toString() == challenge['_id'];
+    }, orElse: () => null);
+
+    if (userChallenge != null && userChallenge is Map && userChallenge['joinedAt'] != null) {
+        joinedAt = DateTime.tryParse(userChallenge['joinedAt'].toString());
+    }
+
+    // Filter logs with safety
+    final relevantHistory = _fullHistory.where((log) {
+       if (joinedAt != null) {
+          final logDate = DateTime.tryParse(log['scannedAt'].toString());
+          if (logDate != null && logDate.isBefore(joinedAt)) return false;
+       }
+       return true;
+    }).toList();
+
+    String type = challenge['type'];
+    if (type == 'points') return 0;
+    if (type == 'total_items') return relevantHistory.length;
+    return relevantHistory.where((log) => log['wasteType'] == type).length;
   }
 
   @override
@@ -308,19 +357,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
                   // TODO: Bind actual progress from userDetails if available.
                   // For now, static or 0.
+                  // Calculated Progress
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: 0.1, // Demo value
+                      value: _calculateProgress(challenge), 
                       backgroundColor: Colors.grey[200],
                       color: AppTheme.primaryGold,
                       minHeight: 8,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerRight,
-                    child: Text('10%', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      '${(_calculateProgress(challenge) * 100).toInt()}%', 
+                      style: const TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)
+                    ),
                   )
                 ],
               ),

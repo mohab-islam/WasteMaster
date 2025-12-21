@@ -270,6 +270,21 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                       child: const Text('Joined', style: TextStyle(color: AppTheme.primaryGold)),
                     ),
                   )
+                ] else if (isCompleted) ...[
+                   const SizedBox(height: 16),
+                   SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: null, // Disabled
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.withOpacity(0.1),
+                        disabledBackgroundColor: Colors.grey.withOpacity(0.1),
+                        disabledForegroundColor: Colors.grey,
+                        elevation: 0,
+                      ),
+                      child: const Text('Done'),
+                    ),
+                  )
                 ]
               ],
             ),
