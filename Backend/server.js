@@ -148,7 +148,10 @@ app.post('/api/auth/login', async (req, res) => {
 // 2. Get User Details
 app.get('/api/user/:id', async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id)
+            .populate('completedChallenges')
+            .populate('joinedChallenges');
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -265,16 +268,60 @@ app.post('/api/recycle/claim', async (req, res) => {
 
 // --- V2 Features ---
 
-// 3. Leaderboard (Top 10)
+// 3. Leaderboard (Top 10 - Weekly or Overall)
 app.get('/api/leaderboard', async (req, res) => {
     try {
-        // Sort by points descending, limit 10
+        const { timeframe } = req.query; // 'weekly' or undefined/overall
+
+        if (timeframe === 'weekly') {
+            // Weekly Logic: Aggregate points from RecycleLog for the last 7 days (or start of week)
+            const startOfWeek = new Date();
+            startOfWeek.setHours(0, 0, 0, 0);
+            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Set to Sunday (or Monday)
+
+            const weeklyScores = await RecycleLog.aggregate([
+                {
+                    $match: {
+                        scannedAt: { $gte: startOfWeek }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$userId",
+                        weeklyPoints: { $sum: "$pointsEarned" }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "userInfo"
+                    }
+                },
+                { $unwind: "$userInfo" }, // Deconstruct the array
+                {
+                    $project: {
+                        name: "$userInfo.name",
+                        points: "$weeklyPoints",
+                        totalRecycled: "$userInfo.totalRecycled" // Keeping this as overall stat, or calculation needed?
+                    }
+                },
+                { $sort: { points: -1 } },
+                { $limit: 10 }
+            ]);
+
+            return res.json(weeklyScores);
+        }
+
+        // Default: Overall Points
         const leaderboard = await User.find()
             .select('name points totalRecycled') // only return needed fields
             .sort({ points: -1 })
             .limit(10);
         res.json(leaderboard);
     } catch (error) {
+        console.error('Leaderboard error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

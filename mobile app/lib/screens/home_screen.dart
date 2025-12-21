@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'profile_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = 'User';
   int _points = 0;
   List<dynamic> _recentHistory = [];
-  dynamic _activeChallenge;
+  List<dynamic> _activeChallenges = [];
   bool _isLoading = true;
 
   @override
@@ -50,22 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
             // Take top 2 history items
             _recentHistory = history.take(2).toList();
             
-            // Logic: Show first JOINED challenge. If none, show first available.
-            // But UI design assumes "Active", so let's try to find a joined one.
+            // Logic: Show ALL joined challenges
             List joinedIds = userDetails['joinedChallenges'] ?? [];
-            var active = challenges.firstWhere(
-                (c) => joinedIds.contains(c['_id']), 
-                orElse: () => null
-            );
-            
-            // If no active challenge found, maybe don't show any, or show "Start a Challenge!"?
-            // User requested removing Join button "as it is already active".
-            // So if we show one here, it implies it IS active.
-            // If user hasn't joined any, we shouldn't show "Active Challenge" section or show a "Join One" prompt.
-            // For now, if no joined challenge, we hide the section or pick one? 
-            // Let's pick one but make sure the UI handles it. 
-            // Actually, simplest is: Only show if joined.
-            _activeChallenge = active;
+            // helper to safe compare
+            bool isJoined(String id) => joinedIds.any((j) => j.toString() == id);
+
+            _activeChallenges = challenges.where((c) => isJoined(c['_id'].toString())).toList();
             
             _isLoading = false;
           });
@@ -83,9 +75,28 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('My Dashboard'),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {}, // Drawer placeholder
+        leading: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          onSelected: (value) async {
+            if (value == 'profile') {
+               Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            } else if (value == 'logout') {
+               await AuthService.logout();
+               if (mounted) {
+                 Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+               }
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'profile',
+              child: Text('Profile'),
+            ),
+             const PopupMenuItem<String>(
+              value: 'logout',
+              child: Text('Sign Out'),
+            ),
+          ],
         ),
       ),
       body: _isLoading 
@@ -151,31 +162,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Community Goals
-                  _sectionHeader('Community Goals'),
-                  const SizedBox(height: 12),
-                  Text('Neighborhood Recycling Goal', style: Theme.of(context).textTheme.bodyLarge),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: 0.75,
-                    backgroundColor: AppTheme.cardColor,
-                    color: AppTheme.primaryGold,
-                    minHeight: 10,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('75% Complete', style: Theme.of(context).textTheme.bodyMedium),
-                  ),
-
-                  const SizedBox(height: 24),
-                  
-                  // Active Challenge
-                  _sectionHeader('Active Challenges'),
-                  const SizedBox(height: 12),
-                  if (_activeChallenge != null)
-                    _buildChallengeCard(_activeChallenge!)
+                  // Active Challenges (List)
+                  if (_activeChallenges.isNotEmpty) ...[
+                    _sectionHeader('Active Challenges'),
+                    const SizedBox(height: 12),
+                    ..._activeChallenges.map((c) => _buildChallengeCard(c)),
+                  ]
                 ],
               ),
             ),
@@ -230,56 +222,67 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChallengeCard(dynamic challenge) {
+    // We can use a simpler card or an ExpansionTile. 
+    // User asked for "drop down". ExpansionTile is perfect.
+    // Calculate progress if we had the data. For now, assume 0 or from backend if linked.
+    // The previous implementation was a container. Let's make it an expandable card.
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Active Challenge', style: TextStyle(color: AppTheme.secondaryGreen, fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(
-                  challenge['title'],
-                  style: const TextStyle(
-                      color: AppTheme.textLight, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Text(
-                  'Goal: ${challenge['goal']} items',
-                   style: const TextStyle(color: AppTheme.textDim, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                // Tiny progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: 0.0, // TODO: Calculate actual progress if possible, or leave 0 for now as "Start"
-                    backgroundColor: AppTheme.background,
-                    color: AppTheme.primaryGold,
-                    minHeight: 4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Icon
-          Container(
-            width: 60,
-            height: 60,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Container(
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppTheme.primaryGold.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.emoji_events, size: 30, color: AppTheme.primaryGold),
-          )
-        ],
+            child: const Icon(Icons.emoji_events, size: 24, color: AppTheme.primaryGold),
+          ),
+          title: Text(
+             challenge['title'],
+             style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textLight),
+          ),
+          subtitle: Text(
+             'Goal: ${challenge['goal']} items',
+             style: const TextStyle(color: AppTheme.textDim, fontSize: 12),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Current Progress', style: TextStyle(color: AppTheme.textDim, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  // TODO: Bind actual progress from userDetails if available.
+                  // For now, static or 0.
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: 0.1, // Demo value
+                      backgroundColor: Colors.grey[200],
+                      color: AppTheme.primaryGold,
+                      minHeight: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('10%', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
