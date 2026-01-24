@@ -1,0 +1,13 @@
+train: C:\Users\medhat\Downloads\Final Grad\train\images
+val: C:\Users\medhat\Downloads\Final Grad\valid\images
+test: C:\Users\medhat\Downloads\Final Grad\test\images
+
+nc: 6
+names: ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
+
+roboflow:
+  workspace: polygence-project
+  project: trashnet-a-set-of-annotated-images-of-trash-that-can-be-used-for-object-detection
+  version: 19
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/polygence-project/trashnet-a-set-of-annotated-images-of-trash-that-can-be-used-for-object-detection/dataset/19

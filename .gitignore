@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*.so
+
+# Environment Variables
+.env
+
+# Large Data & Datasets
+Final Grad/train/
+Final Grad/test/
+Final Grad/valid/
+Final Grad/runs/
+*.mp4
+*.avi
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Models (Optional: Comment out if you WANT to track model weights)
+# *.pt
