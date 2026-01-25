@@ -25,6 +25,12 @@ This guide details exactly how to connect the Hardware (Arduino + Pi), setup the
 | **HC-SR04 Trig** | Trig | D9 |
 | **HC-SR04 Echo** | Echo | D10 |
 
+### Power Supply (Servos)
+> [!IMPORTANT]
+> **DO NOT** power servos from the Arduino 5V pin.
+> See [Power_Connection.md](Power_Connection.md) for the full wiring guide using 3x 3.7V batteries and LM2596.
+
+
 ### Arduino -> Raspberry Pi
 - Connect Arduino to Raspberry Pi via **USB Cable**.
 - Identify the port on Pi: usually `/dev/ttyACM0` or `/dev/ttyUSB0`.
