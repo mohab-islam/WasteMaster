@@ -96,6 +96,11 @@ void performSorting(String wasteType) {
   else if (wasteType == "GLASS") targetAngle = POS_GLASS;
   else targetAngle = POS_TRASH;
   
+  // Attach Servos only when needed
+  sortServo.attach(SERVO_SORT_PIN);
+  dumpServo.attach(SERVO_DUMP_PIN);
+  delay(100); // Startup delay
+  
   // Step 1: Align Sorter
   sortServo.write(targetAngle);
   delay(1000); // Wait for servo to reach position
@@ -104,10 +109,11 @@ void performSorting(String wasteType) {
   dumpServo.write(DUMP_ACTIVE);
   delay(1000); // Hold
   dumpServo.write(DUMP_REST);
-  delay(500); // Recover
+  delay(1000); // Recover and ensure fully back
   
-  // Step 3: Reset Sorter (Optional, or leave it)
-  // sortServo.write(90); 
+  // Step 3: Detach to save power (reduces hum/jitter)
+  sortServo.detach();
+  dumpServo.detach();
 }
 
 int getDistance() {
