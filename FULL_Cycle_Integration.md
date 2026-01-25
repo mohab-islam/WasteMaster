@@ -50,6 +50,7 @@ This guide details exactly how to connect the Hardware (Arduino + Pi), setup the
     ```
 3. Transfer Files to Pi:
     - `pi_client.py`
+    - `detect.py` (New detection module)
     - **Copy your customized model**: `Final Grad/runs/detect/train3/weights/best.pt` -> Rename to `best.pt` and place next to `pi_client.py`.
 4. **Configuration**:
     - Edit `pi_client.py`:

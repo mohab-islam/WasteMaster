@@ -13,11 +13,12 @@ except ImportError:
     print("Error: 'pyserial' not found. Install with: pip install pyserial")
     serial = None
 
+# Import our new Detection Module
 try:
-    from ultralytics import YOLO
+    import detect
 except ImportError:
-    print("Warning: 'ultralytics' not found. YOLO model will fallback to simulation.")
-    YOLO = None
+    print("Error: 'detect.py' not found in the same directory.")
+    sys.exit(1)
 
 # CONFIGURATION
 # ---------------------------------------------------------
@@ -28,41 +29,14 @@ API_URL = "https://wastemaster.onrender.com/api/token/generate"
 
 SERIAL_PORT = 'COM3' # CHANGE THIS to your Arduino Port (e.g., /dev/ttyACM0 on Pi)
 BAUD_RATE = 9600
-CAMERA_INDEX = 0
-
-# Class Names from your data.yaml
-CLASS_NAMES = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
-
 # ---------------------------------------------------------
 
 class WasteMasterClient:
     def __init__(self):
-        self.model = None
         self.serial_conn = None
-        self.cap = None
         self.running = True
-        
-        self.setup_model()
         self.setup_serial()
         
-    def setup_model(self):
-        if YOLO:
-            print("[Init] Loading YOLOv8 Model...")
-            # Ensure best.pt (your trained model) is in the same folder or provide path
-            try:
-                self.model = YOLO("best.pt") 
-                print("[Init] Model Loaded Successfully.")
-            except Exception as e:
-                print(f"[Warn] 'best.pt' not found. Trying 'yolov8n.pt'...")
-                try:
-                    self.model = YOLO("yolov8n.pt")
-                    print("[Init] Base Model Loaded.")
-                except Exception as e2:
-                    print(f"[Error] Failed to load any model: {e2}")
-                    self.model = None
-        else:
-            print("[Init] YOLO library not present. Running in SIMULATION MODE for inference.")
-
     def setup_serial(self):
         if not serial:
             return
@@ -114,15 +88,6 @@ class WasteMasterClient:
                 image_array = np.asarray(bytearray(resp.content), dtype=np.uint8)
                 qr_img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
                 
-                # Resize for visibility (optional, fit to screen)
-                # For Pi LCD (e.g., 800x480), trigger fullscreen
-                
-                # Add Text overlay
-                cv2.putText(qr_img, f"Type: {waste_type.upper()}", (10, 30), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
-                cv2.putText(qr_img, "Scan to Claim!", (10, 190), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
                 cv2.namedWindow("WasteMaster QR", cv2.WINDOW_NORMAL)
                 cv2.setWindowProperty("WasteMaster QR", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 cv2.imshow("WasteMaster QR", qr_img)
@@ -136,57 +101,6 @@ class WasteMasterClient:
                 
         except Exception as e:
             print(f"[Error] Display logic failed: {e}")
-
-    def capture_and_infer(self):
-        """
-        Captures an image from the camera and runs inference.
-        Returns the detected class name or 'trash' if multiple/unknown.
-        """
-        print("[Cam] Capturing image for analysis...")
-        
-        cap = cv2.VideoCapture(CAMERA_INDEX)
-        if not cap.isOpened():
-            print("[Error] Camera not found.")
-            return "unknown"
-            
-        ret, frame = cap.read()
-        cap.release()
-        
-        if not ret:
-            print("[Error] Failed to capture frame.")
-            return "unknown"
-
-        if self.model:
-            # Run YOLO Inference
-            results = self.model(frame)
-            
-            # Simple logic: pick the detection with highest confidence
-            highest_conf = 0.0
-            detected_class = "unknown"
-            
-            for r in results:
-                for box in r.boxes:
-                    conf = float(box.conf)
-                    cls_id = int(box.cls)
-                    if conf > highest_conf:
-                        highest_conf = conf
-                        if cls_id < len(CLASS_NAMES):
-                            detected_class = CLASS_NAMES[cls_id]
-                        else:
-                            detected_class = "trash" # Default fallback
-            
-            print(f"[AI] Detected: {detected_class} ({highest_conf:.2f})")
-            
-            # Threshold
-            if highest_conf < 0.4:
-                print("[AI] Confidence too low. Ignoring.")
-                return None
-                
-            return detected_class
-        else:
-            # Simulation fallback
-            print("[Sim] Simulating detection 'plastic'...")
-            return "plastic"
 
     def loop(self):
         print("\n--- WasteMaster IoT Client Running ---")
@@ -212,13 +126,29 @@ class WasteMasterClient:
                          
                 # 3. Process Trigger
                 if triggered:
-                    waste_class = self.capture_and_infer()
+                    # CALL DETECT MODULE
+                    print("[AI] Calling Detection...")
+                    waste_class, conf = detect.detect_waste()
                     
                     if waste_class:
+                        print(f"[AI] Identified: {waste_class} ({conf:.2f})")
+                        
+                        # VALIDATE AND SEND TO ARDUINO
+                        # Map raw YOLO classes to Arduino commands
+                        # 'cardboard' -> PAPER, etc.
+                        cmd = waste_class.upper()
+                        if cmd == "CARDBOARD": cmd = "PAPER"
+                        
+                        if self.serial_conn:
+                            print(f"[Serial] Sending sorting command: {cmd}")
+                            self.serial_conn.write(f"{cmd}\n".encode('utf-8'))
+                        
                         self.generate_token(waste_class)
+                    else:
+                        print("[AI] No valid object detected.")
                     
-                    # Debounce/Cooldown to prevent double scanning the same item immediately
-                    time.sleep(2)
+                    # Debounce/Cooldown
+                    time.sleep(3) # Increased wait for sorting to finish
                     if self.serial_conn:
                         self.serial_conn.reset_input_buffer()
 
@@ -232,14 +162,6 @@ class WasteMasterClient:
                 time.sleep(0.1)
 
 if __name__ == "__main__":
-    # Needed for manual non-blocking input check on Windows? 
-    # Actually, Windows doesn't support select on stdin. 
-    # We will stick to Serial for main loop and a simple blocking input fallback if serial fails is simpler for now,
-    # OR better yet, just run the loop.
-    
-    # Correction for Windows Manual Trigger for testing:
-    # We'll just define a simple loop.
-    
     client = WasteMasterClient()
     
     if client.serial_conn:
@@ -250,7 +172,9 @@ if __name__ == "__main__":
             cmd = input("Press Enter to simulate Detector (q to quit): ")
             if cmd == 'q': break
             
-            waste_class = client.capture_and_infer()
+            # CALL DETECT MODULE
+            waste_class, conf = detect.detect_waste()
             if waste_class:
+                print(f"[AI] Identified: {waste_class} ({conf:.2f})")
                 client.generate_token(waste_class)
 

@@ -4,7 +4,7 @@
 
 #define TRIG_PIN 9
 #define ECHO_PIN 10
-#define THRESHOLD_CM 20  // Detection distance in cm
+#define THRESHOLD_CM 10  // Detection distance in cm
 
 // Set this to true to see distance values in Serial Monitor
 // Set to false when connecting to Raspberry Pi Python script
