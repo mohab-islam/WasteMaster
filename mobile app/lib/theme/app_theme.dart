@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Colors extracted from design
-  static const Color background = Color(0xFFFFFFFF); // White
-  static const Color cardColor = Color(0xFFF0F7F4); // Very light minty grey
-  static const Color primaryGold = Color(0xFF26A69A); // Mint Green (Teal 400)
-  static const Color secondaryGreen = Color(0xFF80CBC4); // Lighter Mint
-  static const Color textLight = Color(0xFF212121); // Dark Grey/Black for Light Mode
-  static const Color textDim = Color(0xFF757575); // Grey for subtitles
+  // Colors extracted from design (Eco-Warrior Dark Theme)
+  static const Color background = Color(0xFF1E1C15); // Dark Earthy Brown/Black
+  static const Color cardColor = Color(0xFF333022); // Dark Olive/Brown for cards
+  static const Color primaryGold = Color(0xFFD4AF37); // Metallic Gold
+  static const Color secondaryGreen = Color(0xFF558B2F); // Earthy Green accent
+  static const Color textLight = Color(0xFFFFFFFF); // White text
+  static const Color textDim = Color(0xFFDDD0A4); // Beige/Gold for subtitles
 
-  static ThemeData get darkTheme { // keeping name 'darkTheme' but implementation is now Light/Mint
+  static ThemeData get darkTheme { 
     return ThemeData(
-      brightness: Brightness.light,
+      brightness: Brightness.dark, // Switched to Dark
       scaffoldBackgroundColor: background,
       primaryColor: primaryGold,
       appBarTheme: AppBarTheme(
@@ -28,7 +28,7 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: background,
         selectedItemColor: primaryGold,
-        unselectedItemColor: textDim,
+        unselectedItemColor: textDim.withOpacity(0.6),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         showUnselectedLabels: true,
@@ -41,17 +41,22 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryGold,
-          foregroundColor: Colors.white, 
+          backgroundColor: primaryGold, // Gold buttons
+          foregroundColor: const Color(0xFF1E1C15), // Dark text on gold button for contrast
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       cardColor: cardColor,
+      cardTheme: CardTheme(
+        color: cardColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: cardColor,
+        fillColor: cardColor, // Inputs match card background
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
