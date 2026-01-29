@@ -1,70 +1,141 @@
-// WasteMaster Arduino Sensor Node (DEBUG VERSION)
-// Hardware: Arduino Uno/Nano, HC-SR04 Ultrasonic Sensor
-// Function: Detects object in bin, sends "DETECTED" signal via Serial to Raspberry Pi.
+#include <Servo.h>
 
+// WasteMaster Arduino (Integrated Version)
+// Merges User's Sensor Logic + Servo Sorting
+
+// PINS
 #define TRIG_PIN 9
 #define ECHO_PIN 10
-#define THRESHOLD_CM 10  // Detection distance in cm
+#define SERVO_SORT_PIN 3
+#define SERVO_DUMP_PIN 5
 
-// Set this to true to see distance values in Serial Monitor
-// Set to false when connecting to Raspberry Pi Python script
+#define THRESHOLD_CM 10   // Restored to 10cm as per user reference
+
+// SERVO ANGLES
+// Calibrate these for your specific chamber locations!
+int POS_PAPER = 0;
+int POS_PLASTIC = 60;
+int POS_METAL = 120;
+int POS_GLASS = 180;
+int POS_TRASH = 90; 
+
+int DUMP_REST = 0;
+int DUMP_ACTIVE = 45;
+
+Servo sortServo;
+Servo dumpServo;
+
+// DEBUG MODE: Set to false after testing
 bool DEBUG_MODE = true; 
 
 bool objectDetected = false;
 
 void setup() {
-  Serial.begin(9600); 
+  Serial.begin(9600);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
   
+  // Attach servos briefly to reset position
+  sortServo.attach(SERVO_SORT_PIN);
+  dumpServo.attach(SERVO_DUMP_PIN);
+  sortServo.write(90);       // Center
+  dumpServo.write(DUMP_REST);
+  delay(500);
+  sortServo.detach();
+  dumpServo.detach();
+  
   if (DEBUG_MODE) {
-    Serial.println("--- WasteMaster Sensor DEBUG ---");
-    Serial.println("1. Open Serial Monitor at 9600 baud");
-    Serial.println("2. Verify distance readings below");
+    Serial.println("--- System Ready ---");
+    Serial.println("1. Hand in front (<10cm) -> 'DETECTED'");
+    Serial.println("2. Wait for Python to send command...");
   }
 }
 
 void loop() {
+  // 1. Check for Incoming Commands (Sorting)
+  // This must be checked continuously so we don't miss the Pi's reply
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    
+    if (command.length() > 0) {
+      if (DEBUG_MODE) {
+        Serial.print("RX Command: ");
+        Serial.println(command);
+      }
+      performSorting(command);
+      
+      // After sorting, the object should be gone. 
+      // We assume clear to prevent immediate re-trigger if sensor is slow.
+      objectDetected = false; 
+    }
+  }
+
+  // 2. Measure Distance (User's Logic)
   long duration;
   int distance;
 
-  // Clear trig
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
-  
-  // Trigger pulse
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
   
-  // Read echo
   duration = pulseIn(ECHO_PIN, HIGH);
-  
-  // Calculate dist (speed of sound 343m/s)
   distance = duration * 0.034 / 2;
   
-  if (DEBUG_MODE) {
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.println(" cm");
-  }
+  // Optional Debug of distance
+  // if (DEBUG_MODE) { Serial.println(distance); }
 
-  // Logic: Only send "DETECTED" when an object ENTERS the range
+  // 3. Sensor State Machine
+  // Only trigger if we haven't already detected an object
   if (!objectDetected && distance > 0 && distance < THRESHOLD_CM) {
-    // New Object Detected!
+    // New Object!
     objectDetected = true;
-    Serial.println("DETECTED"); // This is the signal for the Pi
+    Serial.println("DETECTED"); 
     
-    if (DEBUG_MODE) {
-       Serial.println(">>> TRIGGER SENT <<<");
-    }
+    if (DEBUG_MODE) Serial.println(">>> DETECTED (Waiting for Pi...) <<<");
     
-    delay(2000); // Wait 2s to avoid double triggers
+    // DO NOT use delay(2000) here, or you will block the Serial read!
+    // The flag `objectDetected = true` prevents spamming.
+    delay(500); // Short debounce
   } 
-  else if (objectDetected && distance > THRESHOLD_CM) {
-    // Object removed
+  else if (objectDetected && distance > THRESHOLD_CM + 5) {
+    // Input Logic: Object Removed Manually (or successfully dumped)
+    // The +5 is a hysteresis buffer
     objectDetected = false;
+    if (DEBUG_MODE) Serial.println(">>> CLEARED <<<");
+    delay(200);
   }
   
-  delay(200); // 5Hz sampling
+  delay(50); // Fast loop to stay responsive
+}
+
+void performSorting(String wasteType) {
+  int targetAngle = 90;
+  
+  if (wasteType == "PAPER") targetAngle = POS_PAPER;
+  else if (wasteType == "PLASTIC") targetAngle = POS_PLASTIC;
+  else if (wasteType == "METAL") targetAngle = POS_METAL;
+  else if (wasteType == "GLASS") targetAngle = POS_GLASS;
+  else targetAngle = POS_TRASH;
+  
+  if (DEBUG_MODE) Serial.println("Moving Servos...");
+
+  sortServo.attach(SERVO_SORT_PIN);
+  dumpServo.attach(SERVO_DUMP_PIN);
+  delay(50);
+
+  // Align
+  sortServo.write(targetAngle);
+  delay(1000); 
+  
+  // Dump
+  dumpServo.write(DUMP_ACTIVE);
+  delay(800); 
+  dumpServo.write(DUMP_REST);
+  delay(800); 
+  
+  sortServo.detach();
+  dumpServo.detach();
 }
