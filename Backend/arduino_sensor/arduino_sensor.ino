@@ -8,16 +8,16 @@
 #define ECHO_PIN 10
 #define SERVO_SORT_PIN 3
 #define SERVO_DUMP_PIN 5
+#define LED_STRAP_PIN 6  // New 12V LED Control Pin
 
 #define THRESHOLD_CM 10   // Restored to 10cm as per user reference
 
 // SERVO ANGLES
 // Calibrate these for your specific chamber locations!
 int POS_PAPER = 0;
-int POS_PLASTIC = 60;
-int POS_METAL = 120;
+int POS_PLASTIC = 90;
 int POS_GLASS = 180;
-int POS_TRASH = 90; 
+int POS_METAL = 270; 
 
 int DUMP_REST = 0;
 int DUMP_ACTIVE = 45;
@@ -34,11 +34,13 @@ void setup() {
   Serial.begin(9600);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
+  pinMode(LED_STRAP_PIN, OUTPUT);
+  digitalWrite(LED_STRAP_PIN, LOW); // Keep off initially
   
   // Attach servos briefly to reset position
   sortServo.attach(SERVO_SORT_PIN);
   dumpServo.attach(SERVO_DUMP_PIN);
-  sortServo.write(90);       // Center
+  sortServo.write(0);       // Reset / Default to 0
   dumpServo.write(DUMP_REST);
   delay(500);
   sortServo.detach();
@@ -68,6 +70,7 @@ void loop() {
       // After sorting, the object should be gone. 
       // We assume clear to prevent immediate re-trigger if sensor is slow.
       objectDetected = false; 
+      digitalWrite(LED_STRAP_PIN, LOW); 
     }
   }
 
@@ -92,6 +95,7 @@ void loop() {
   if (!objectDetected && distance > 0 && distance < THRESHOLD_CM) {
     // New Object!
     objectDetected = true;
+    digitalWrite(LED_STRAP_PIN, HIGH); // Turn ON Light for Camera
     Serial.println("DETECTED"); 
     
     if (DEBUG_MODE) Serial.println(">>> DETECTED (Waiting for Pi...) <<<");
@@ -104,6 +108,7 @@ void loop() {
     // Input Logic: Object Removed Manually (or successfully dumped)
     // The +5 is a hysteresis buffer
     objectDetected = false;
+    digitalWrite(LED_STRAP_PIN, LOW);  // Turn OFF Light
     if (DEBUG_MODE) Serial.println(">>> CLEARED <<<");
     delay(200);
   }
@@ -112,13 +117,17 @@ void loop() {
 }
 
 void performSorting(String wasteType) {
-  int targetAngle = 90;
+  int targetAngle = -1;
   
   if (wasteType == "PAPER") targetAngle = POS_PAPER;
   else if (wasteType == "PLASTIC") targetAngle = POS_PLASTIC;
-  else if (wasteType == "METAL") targetAngle = POS_METAL;
   else if (wasteType == "GLASS") targetAngle = POS_GLASS;
-  else targetAngle = POS_TRASH;
+  else if (wasteType == "METAL") targetAngle = POS_METAL;
+  
+  if (targetAngle == -1) {
+    if (DEBUG_MODE) Serial.println("Ignored: Unknown Category");
+    return;
+  }
   
   if (DEBUG_MODE) Serial.println("Moving Servos...");
 
@@ -136,6 +145,8 @@ void performSorting(String wasteType) {
   dumpServo.write(DUMP_REST);
   delay(800); 
   
+  sortServo.write(0);
+  delay(500);
   sortServo.detach();
   dumpServo.detach();
 }

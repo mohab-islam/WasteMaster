@@ -49,3 +49,38 @@ You **MUST** connect the **Negative (-)** of the Battery/LM2596 output to the **
 | **Arduino Pin 3** | **Servo 1 (Yellow)** | Control Signal |
 | **Arduino Pin 5** | **Servo 2 (Yellow)** | Control Signal |
 | **RPi USB** | **Arduino USB** | Logic Power & Serial Data |
+
+## 5. Adding a 12V LED Strap (New)
+
+We can add a 12V LED Strap to the circuit to illuminate the chamber (improving Camera detection).
+
+### Power Source
+The **11.1V Battery Pack** is perfect for 12V LED straps (11.1V - 12.6V is within safe operating range).
+**DO NOT** connect the LED to the Arduino 5V or the LM2596 5V output. It needs raw battery power.
+
+### Connection Options
+
+#### Option A: Always On (Simplest)
+The LED turns on as soon as the battery is plugged in.
+*   **LED Red (+)** -> **Battery / LM2596 IN (+)**
+*   **LED Black (-)** -> **Battery / LM2596 IN (-)**
+
+#### Option B: Arduino Controlled (Smart)
+To turn the LED on only when an object is detected (saving battery and helping the camera), use a **Mosfet Module** (e.g., IRF520 / IRLZ44N) or a **Relay Module**.
+
+**Using a N-Channel MOSFET (Recommended)**:
+1.  **Battery (+) / LM2596 IN (+)** -> **LED Strip (+)**
+2.  **LED Strip (-)** -> **MOSFET Drain (D) / V+** (on module output)
+3.  **MOSFET Source (S) / GND** -> **Battery (-) / Ground**
+4.  **Arduino Pin 6 (PWM)** -> **MOSFET Gate / Signal**
+5.  **Arduino GND** -> **MOSFET GND** (Common Ground is critical!)
+
+**Using a Relay Module**:
+1.  **Arduino 5V** -> **Relay VCC**
+2.  **Arduino GND** -> **Relay GND**
+3.  **Arduino Pin 6** -> **Relay IN**
+4.  **Battery (+)** -> **Relay COM** (Common)
+5.  **Relay NO** (Normally Open) -> **LED Strip (+)**
+6.  **Battery (-)** -> **LED Strip (-)**
+
+*Note: I have updated the Arduino code to use **Pin 6** for this LED.*
