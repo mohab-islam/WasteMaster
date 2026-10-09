@@ -4,8 +4,15 @@ __pycache__/
 *.py[cod]
 *.so
 
-# Environment Variables
+# Environment variables (only .env.example is tracked)
 .env
+.env.*
+!.env.example
+
+# Logs / scratch
+*.log
+verify_log.txt
+debug_output.txt
 
 # Large Data & Datasets
 Final Grad/train/

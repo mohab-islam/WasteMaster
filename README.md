@@ -1,181 +1,163 @@
-# WasteMaster V2 - Gamified Recycling App ♻️🎮
+<div align="center">
 
-This project is a full-stack IoT-enabled recycling application features a **Node.js Backend** and a **Flutter Mobile App**.
+# ♻️ WasteMaster
 
-## 📂 Project Structure
-- `Backend/`: Node.js + Express Server + MongoDB
-- `mobile app/`: Flutter / Dart Application
+**A gamified, IoT‑enabled smart recycling system: a bin that recognises waste, a backend that rewards it, and a mobile app that makes recycling a game.**
 
----
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-Dart-02569B?logo=flutter&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white)
+![MQTT](https://img.shields.io/badge/MQTT-IoT-660066?logo=mqtt&logoColor=white)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF?logo=yolo&logoColor=black)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white)
 
-## 🛠️ Prerequisites
-Before running, ensure you have the following installed on your PC:
-1.  **Node.js** (v14+): [Download here](https://nodejs.org/)
-2.  **MongoDB**: [Download Community Server](https://www.mongodb.com/try/download/community) (Ensure it is running locally on port 27017).
-3.  **Flutter SDK**: [Install Guide](https://docs.flutter.dev/get-started/install)
-4.  **Android Studio** or **VS Code** with Flutter extensions.
+</div>
 
 ---
 
-## 🚀 Step 1: Backend Setup (Server)
+## ✨ What it does
 
-1.  **Navigate to the Backend folder:**
-    ```bash
-    cd Backend
-    ```
+1. **Detect.** A camera on the bin classifies each item (cardboard, glass, metal, paper, plastic, trash) with a YOLOv8 model and routes it to the right compartment.
+2. **Reward.** The bin asks the backend for a one‑time **reward token**. The server answers with a token and a **QR code**, shown on the bin's screen.
+3. **Claim.** The user scans the QR code in the Flutter app and instantly receives points. A token can only be claimed once.
+4. **Play.** Points feed a **leaderboard**, personal **history**, and community **challenges** to keep people recycling.
 
-2.  **Install Dependencies:**
-    ```bash
-    npm install
-    ```
+```mermaid
+flowchart LR
+    subgraph Bin["Smart bin (Raspberry Pi)"]
+        CAM[Camera] --> YOLO["YOLOv8 · detect.py"]
+        SENS[Sensors / Arduino] --> PI["pi_client.py"]
+        YOLO --> PI
+    end
+    PI -- "POST /api/token/generate" --> API
+    subgraph Cloud["Backend"]
+        API["Node.js · Express"] --> DB[("MongoDB")]
+        API <--> MQ{{"MQTT broker"}}
+    end
+    APP["Flutter app"] -- "scan QR → POST /api/recycle/claim" --> API
+    APP -- "leaderboard · history · challenges" --> API
+```
 
-3.  **Configure Environment:**
-    *   Ensure you have a `.env` file in the `Backend` folder.
-    *   Content should look like:
-        ```env
-        PORT=5000
-        MONGO_URI=mongodb://127.0.0.1:27017/wastemaster
-        MQTT_BROKER=your_mqtt_broker_url_here
-        ```
+## 🧰 Tech stack
 
-4.  **Seed the Database (First Time Only):**
-    *   This populates the challenges for the app.
-    ```bash
-    node seed_challenges.js
-    ```
+| Layer | Technology |
+|---|---|
+| Mobile app | Flutter / Dart (login, home, QR scan, history, leaderboard, challenges, profile) |
+| Backend | Node.js, Express, Mongoose, MQTT, dotenv |
+| Database | MongoDB (local or Atlas) |
+| Computer vision | YOLOv8 (Ultralytics), trained on a TrashNet‑style Roboflow dataset (`Final Grad/`) |
+| Hardware | Raspberry Pi (GPIO, camera), Arduino sensor sketch |
 
-5.  **Start the Server:**
-    ```bash
-    npm run dev
-    ```
-    *   *Success Message:* `Server running on port 5000` & `MongoDB Connected`
+## 📂 Repository layout
 
----
+```
+Backend/          Express API, models, MQTT bridge, Pi/Arduino clients, verification scripts
+mobile app/       Flutter application
+Final Grad/       Object-detection notebook, dataset config and YOLOv8 weights
+*.md              Integration, power-wiring and requirements notes
+```
 
-## 📱 Step 2: Mobile App Setup
+## 🚀 Quick start
 
-1.  **Navigate to the Mobile App folder:**
-    ```bash
-    cd "mobile app"
-    ```
+### Prerequisites
+[Node.js 18+](https://nodejs.org/) · [MongoDB](https://www.mongodb.com/try/download/community) (local on `27017`, or an Atlas cluster) · [Flutter SDK](https://docs.flutter.dev/get-started/install) · Android Studio or VS Code.
 
-2.  **Install Flutter Dependencies:**
-    ```bash
-    flutter pub get
-    ```
+### 1 · Backend
 
-3.  **⚠️ IMPORTANT: Update API IP Address**
-    *   Open `lib/services/api_service.dart`.
-    *   Find the line:
-        ```dart
-        static const String baseUrl = 'http://192.168.1.X:5000/api';
-        ```
-    *   Change `192.168.1.X` to your PC's local IP address (Run `ipconfig` in cmd to find it).
-    *   *Note: If running on an Android Emulator on the SAME PC, you can use `10.0.2.2`.*
-
-4.  **Run the App:**
-    *   Ensure an Emulator is open or a physical device is connected via USB.
-    ```bash
-    flutter run
-    ```
-
----
-
-## 🧪 Troubleshooting
-
-*   **"Connection Refused"**: user your PC's IP address (e.g., `192.168.1.5`) instead of `localhost` in the mobile app.
-*   **"Disk Full" error**: Run `flutter clean` and free up space.
-*   **"MongoDB Connection Error"**: Ensure MongoDB service is running in Windows Services.
-
----
-
-## 📝 Commands Summary for Handoff
-
-**Backend:**
 ```bash
 cd Backend
 npm install
-node seed_challenges.js
-npm run dev
+cp .env.example .env        # then edit the values (see table below)
+node seed_challenges.js     # first run only: creates the challenges
+npm run dev                 # → "Server running on port 5000" + "MongoDB Connected"
 ```
 
-**Mobile:**
+**Configuration** (`Backend/.env`, never committed):
+
+| Variable | Example | Purpose |
+|---|---|---|
+| `PORT` | `5000` | HTTP port |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/wastemaster` | MongoDB connection string |
+| `MQTT_BROKER_URL` | `mqtt://test.mosquitto.org` | MQTT broker for the IoT bridge |
+
+> ⚠️ Keep real credentials out of git. `.env` is ignored; only `.env.example` is tracked. If you use MongoDB Atlas, create a dedicated database user for the project and restrict its network access.
+
+### 2 · Mobile app
+
 ```bash
 cd "mobile app"
 flutter pub get
+```
+
+Open `lib/services/api_service.dart` and set `baseUrl` to your machine's LAN address (`ipconfig` / `ifconfig`), for example `http://192.168.1.5:5000/api`. On an Android emulator running on the same PC use `10.0.2.2`.
+
+```bash
 flutter run
 ```
 
----
+### 3 · IoT bridge (Raspberry Pi)
 
----
+`Backend/pi_client.py` turns a "waste sorted" event into a reward token.
 
-## 🤖 Step 3: IoT Bridge (Raspberry Pi Setup)
+- **Simulation mode (default):** run it anywhere and press <kbd>Enter</kbd> to simulate an item.
+- **Hardware mode:** set `REAL_HARDWARE = True`; it listens on GPIO pin 17 (for example an inductive proximity sensor) and calls the API automatically.
 
-The **IoT Bridge** is the link between your physical recycling hardware and the WasteMaster cloud. It allows a Raspberry Pi (or any internet-connected device) to generate reward tokens when a user recycles an item.
-
-### 🏗️ Architecture
-1.  **Detection:** Sensors on the Pi detect waste (e.g., Plastic inserted).
-2.  **Generation:** The Pi runs `pi_client.py` which calls the `POST /api/token/generate` endpoint.
-3.  **Display:** The server returns a unique **Token** and a **QR Code URL**, which the Pi displays on its screen.
-4.  **Claim:** The user scans this QR code using the WasteMaster Mobile App to instantly claim points.
-
-### 🐍 The Pi Client Script (`pi_client.py`)
-This Python script is the brain of the operation. It has two modes:
-
-1.  **Simulation Mode (Default):**
-    *   Run it on your laptop or Pi.
-    *   Press `ENTER` to manually simulate a "Trash Sorted" event.
-    *   Great for testing without sensors.
-
-2.  **Real Hardware Mode (GPIO):**
-    *   Set `REAL_HARDWARE = True` inside the script.
-    *   It uses `RPi.GPIO` to listen for signals on **Pin 17**.
-    *   When a sensor (like an inductive proximity sensor) triggers, it **automatically** calls the API.
-
-#### Deployment to Pi
-1.  Transfer `Backend/pi_client.py` to your Raspberry Pi.
-2.  Install the request library: `pip install requests`
-3.  Run the script: `python pi_client.py`
-4.  *(Optional)* Use `systemd` or `pm2` to keep this script running forever in the background.
-
-### 🔌 API Endpoint
-If you want to build your own custom hardware client (e.g., using Arduino or ESP32), simply make a POST request:
-
-*   **URL:** `https://wastemaster.onrender.com/api/token/generate`
-*   **Method:** `POST`
-*   **Body:** `{ "wasteType": "plastic" }`
-*   **Response:**
-    ```json
-    {
-      "success": true,
-      "token": "b3deedaf...",
-      "points": 10,
-      "qrUrl": "https://api.qrserver.com/..."
-    }
-    ```
-
----
-
-## ✅ Verification & Testing tools
-
-We provide a specialized tool to test the entire system health without needing the physical hardware or mobile app.
-
-### `verify_iot_bridge.js`
-This script acts as both the "Pi" (creating tokens) and the "App" (claiming them) to ensure the server is working perfectly.
-
-**Command:**
 ```bash
-# Test Cloud Server (Production)
-node verify_iot_bridge.js --prod
-
-# Test Local Server
-node verify_iot_bridge.js
+pip install requests
+python pi_client.py
 ```
 
-**What it checks:**
-1.  Can the **Pi** generate a token?
-2.  Can a **User** register/login?
-3.  Can the **App** claim that token?
-4.  Does the system **Prevent** double-claiming the same token?
+Custom hardware (Arduino, ESP32…) only needs one request:
 
+```http
+POST /api/token/generate
+Content-Type: application/json
+
+{ "wasteType": "plastic" }
+```
+
+```json
+{ "success": true, "token": "b3deedaf…", "points": 10, "qrUrl": "https://api.qrserver.com/…" }
+```
+
+### 4 · Waste detection
+
+`Backend/detect.py` runs the YOLOv8 classifier on a camera stream and maps each class to a bin (`PAPER`, `PLASTIC`, `METAL`, `GLASS`, `TRASH`). Training and evaluation live in `Final Grad/ODmodel.ipynb`; the dataset configuration is `Final Grad/data.yaml` (6 classes, [TrashNet on Roboflow](https://universe.roboflow.com/polygence-project/trashnet-a-set-of-annotated-images-of-trash-that-can-be-used-for-object-detection), CC BY 4.0).
+
+## 🔌 API overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/token/generate` | Bin requests a reward token + QR code |
+| `POST` | `/api/auth/register` · `/api/auth/login` | Account creation and login |
+| `GET` | `/api/user/:id` | Profile and points |
+| `POST` | `/api/recycle/claim` | Claim a token (single use) |
+| `GET` | `/api/leaderboard` | Top recyclers |
+| `GET` | `/api/history/:userId` | A user's recycling history |
+| `GET` · `POST` | `/api/challenges` · `/api/challenges/join` | List and join challenges |
+
+## ✅ Verify the whole chain
+
+`verify_iot_bridge.js` plays both the bin and the app: generates a token, registers/logs in a user, claims the token, and checks that claiming it twice is rejected.
+
+```bash
+cd Backend
+node verify_iot_bridge.js          # against your local server
+node verify_iot_bridge.js --prod   # against the deployed server
+```
+
+## 🧯 Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| App shows "Connection refused" | Use your PC's LAN IP, not `localhost`, in `api_service.dart` |
+| `MongoDB Connection Error` | Start the MongoDB service, or check `MONGODB_URI` |
+| Flutter "Disk full" | `flutter clean`, then free some space |
+
+## 📚 More documentation
+
+[`FULL_Cycle_Integration.md`](FULL_Cycle_Integration.md) · [`Power_Connection.md`](Power_Connection.md) · [`REQUIREMENTS.md`](REQUIREMENTS.md) · [`backend commands.md`](backend%20commands.md)
+
+## 👥 Team
+
+Built as a graduation project by [Mohab Islam](https://github.com/mohab-islam) and [Osama Khalid](https://github.com/Osama1khalid).
